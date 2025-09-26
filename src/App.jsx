@@ -24,10 +24,8 @@ function App(){
   useEffect(() => {
     auth.onAuthStateChanged(async (user) => {
       if (user) {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          setUser(userDoc.data() );
-        }
+        setUser(user.uid);
+     
       }
     })
   },[])
@@ -43,7 +41,7 @@ function App(){
           <Route path="/login" element={<Login />} />
           <Route path="/otp" element={<OTP />} />
           <Route path="/case-submission" element={<CaseSubmission />} />
-          <Route path="/advocate-search" element={<AdvocateSearch />} />
+          <Route path="/advocate-search" element={<AdvocateSearch user={user} />} />
 <Route path="/vakil-setu" element={<LegalChatbot />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

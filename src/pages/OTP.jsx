@@ -11,7 +11,7 @@ import {
 import { Scale, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db } from './firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import axios from 'axios';
 
@@ -21,7 +21,6 @@ const OTP = () => {
   const location = useLocation();
   const { toast } = useToast();
   const inputRefs = useRef([]);
-  const [user, setUser] = useState();
 
   const { signUpData } = location.state || {};
 
@@ -83,16 +82,36 @@ const OTP = () => {
       console.warn('OTP verification ignored', err);
     }
 
-    // Proceed to create Firebase user anyway
     try {
-      await createUserWithEmailAndPassword(auth, signUpData.email, signUpData.password);
-      
+      // Create Firebase user
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        signUpData.email,
+        signUpData.password
+      );
+      const currentUser = userCredential.user;
+      console.log('Firebase user created:', currentUser);
 
+      if (currentUser) {
+    
 
+        const userData = {
+          user_id: currentUser.uid,
+          fullName: signUpData.fullName,
+          email: signUpData.email,
+          phone: signUpData.phone,
+          address: signUpData.address,
+          state: signUpData.state,
+          district: signUpData.district,
+          dob: signUpData.dob,
+          userType: 'user'
+        };
 
-     
-
-  
+        const response = await axios.post('http://localhost:5000/userdetails', {
+          user: userData
+        });
+        console.log('User details response:', response.data);
+      }
 
       toast({
         title: 'Signed Up',
@@ -107,7 +126,7 @@ const OTP = () => {
         description: 'Something went wrong while creating user',
         variant: 'destructive'
       });
-      console.error(error);
+      console.error('Firestore error:', error);
     }
   };
 

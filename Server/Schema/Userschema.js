@@ -8,6 +8,8 @@ const UserSchema = new mongoose.Schema({
     state: {type: String, required: true},
     district: {type: String, required: true},
     dob: {type: String, required: true},
+    user_id: {type: String, required: true},
+    dob:{type: Date, required: true},
 
 })
 const User = mongoose.model('User', UserSchema);

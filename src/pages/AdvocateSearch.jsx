@@ -12,7 +12,7 @@ import {
 import axios from 'axios';
 
 // ---- AppointmentBooking Component ----
-const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) => {
+const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed, user }) => {
   const [selectedDate, setSelectedDate] = useState();
   const [selectedTime, setSelectedTime] = useState('');
   const [meetingType, setMeetingType] = useState('');
@@ -31,15 +31,16 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
     { value: 'video-call', label: 'Video Call', icon: Video },
     { value: 'phone-call', label: 'Phone Call', icon: Phone }
   ];
-
-  // Generate dummy user ID (in real app, this would come from authentication)
-  const getDummyUserId = () => {
-    return 'user_' + Math.random().toString(36).substr(2, 9);
-  };
   
   const handleSubmit = async () => {
     if (!selectedDate || !selectedTime || !meetingType) {
       alert("Please select date, time, and meeting type");
+      return;
+    }
+
+    // Validate user ID exists
+    if (!user) {
+      alert("User information is missing. Please login again.");
       return;
     }
     
@@ -47,11 +48,10 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
     
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     const newAppointment = {
-      id: Date.now().toString(),
       advocateId: advocate._id || advocate.id, // Use advocate._id as specified
-      userId: getDummyUserId(), // Generate dummy user ID as string
+      userId: user, // Use the actual user ID from props
       advocateName: advocate.name,
       date: selectedDate.toISOString().split('T')[0],
       time: selectedTime,
@@ -61,8 +61,20 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
       createdAt: new Date().toISOString()
     };
     
-    // Log the appointment data to show the structure
-    console.log('New Appointment Data:', newAppointment);
+    console.log('Booking appointment with data:', newAppointment);
+    
+    // Send appointment data to server
+    try {
+      const response = await axios.post('http://localhost:5000/bookappointment', {
+        appointmentData: newAppointment
+      });
+    }
+    catch (error) {
+      console.error('Error booking appointment:', error);
+      alert('Failed to book appointment. Please try again.');
+      setIsSubmitting(false);
+      return;
+    }
     
     onBookingConfirmed(newAppointment);
     setIsSubmitting(false);
@@ -164,6 +176,12 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
                 <label className="text-sm font-medium">Advocate ID</label>
                 <p className="text-sm text-muted-foreground mt-1 font-mono">
                   {advocate._id || advocate.id}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">User ID</label>
+                <p className="text-sm text-muted-foreground mt-1 font-mono">
+                  {user || 'Not available'}
                 </p>
               </div>
               <div>
@@ -303,7 +321,7 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
               <div>
                 <Button
                   onClick={handleSubmit}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !user}
                   className="w-full"
                 >
                   {isSubmitting ? (
@@ -318,6 +336,11 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
                     </>
                   )}
                 </Button>
+                {!user && (
+                  <p className="text-sm text-red-500 mt-2">
+                    User information is required to book appointments
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -328,12 +351,13 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
 };
 
 // ---- AdvocateSearch Component ----
-const AdvocateSearch = () => {
+const AdvocateSearch = ({user}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [advocateData, setAdvocateData] = useState([]);
   const [filteredAdvocates, setFilteredAdvocates] = useState([]);
   const [selectedAdvocateForBooking, setSelectedAdvocateForBooking] = useState(null);
   const [appointments, setAppointments] = useState([]);
+  const[bookedAppointments,setBookedAppointments]= useState([]);
   const [showMyAppointments, setShowMyAppointments] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -392,6 +416,25 @@ const AdvocateSearch = () => {
 
     fetchAdvocates();
   }, []);
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const response = await axios.post('http://localhost:5000/getappointments', { userId: user });
+        console.log('Appointments API Response:', response.data);
+        if (response.data && Array.isArray(response.data.appointments)) {
+          setAppointments(response.data.appointments);
+        } else {
+          setAppointments([]);
+        }
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+        setAppointments([]);
+      }
+    };
+    fetchAppointments();
+
+
+  },[user,bookedAppointments])
 
   const handleSearch = () => {
     if (!searchQuery.trim()) {
@@ -419,15 +462,23 @@ const AdvocateSearch = () => {
     setAppointments(prev => [...prev, newAppointment]);
   };
 
-  const handleCancelAppointment = (appointmentId) => {
-    setAppointments(prev =>
-      prev.map(appointment =>
-        appointment.id === appointmentId
-          ? { ...appointment, status: 'cancelled' }
-          : appointment
-      )
-    );
-    alert('Appointment cancelled successfully');
+  const handleCancelAppointment = async(appointmentId) => {
+    try{
+      await axios.post('http://localhost:5000/cancelappointment', { appointmentId,status:'cancelled' });
+      setBookedAppointments((prevAppointments) =>
+        prevAppointments.map((appointment) =>
+          appointment._id === appointmentId ? { ...appointment, status: 'cancelled' } : appointment
+        )
+      );
+
+
+    alert(`Appointment cancelled successfully ${appointmentId}`);
+
+    }
+    catch(error){
+      console.error('Error cancelling appointment:', error);
+    }
+
   };
 
   const getStatusIcon = (status) => {
@@ -498,21 +549,22 @@ const AdvocateSearch = () => {
             <p className="text-muted-foreground mt-2">View and manage your scheduled appointments</p>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-6 flex justify-between items-center">
             <Button onClick={() => setShowMyAppointments(false)} variant="outline">
               ← Back to Search
             </Button>
+          
           </div>
 
           {appointments.length > 0 ? (
             <div className="space-y-4">
               {appointments.map((appointment) => (
-                <Card key={appointment.id}>
+                <Card key={appointment._id}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
-                          <h3 className="text-lg font-semibold">{appointment.advocateName}</h3>
+                          <h3 className="text-lg font-semibold">{appointment.advocate_id}</h3>
                           <div className="flex items-center gap-1">
                             {getStatusIcon(appointment.status)}
                             <Badge variant={getStatusBadgeVariant(appointment.status)}>
@@ -533,17 +585,17 @@ const AdvocateSearch = () => {
                             </div>
                             <div className="flex items-center gap-2">
                               <User className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-mono text-xs">User: {appointment.userId}</span>
+                              <span className="font-mono text-xs">User: {appointment.user_id}</span>
                             </div>
                           </div>
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
                               <Briefcase className="w-4 h-4 text-muted-foreground" />
-                              <span>Type: {appointment.consultationType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                              <span>Type: {appointment.consultation_type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Scale className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-mono text-xs">Advocate: {appointment.advocateId}</span>
+                              <span className="font-mono text-xs">Advocate: {appointment.advocate_id}</span>
                             </div>
                             <div className="text-xs text-muted-foreground">
                               Booked: {new Date(appointment.createdAt).toLocaleDateString()}
@@ -562,7 +614,7 @@ const AdvocateSearch = () => {
 
                       {appointment.status !== 'cancelled' && (
                         <Button
-                          onClick={() => handleCancelAppointment(appointment.id)}
+                          onClick={() => handleCancelAppointment(appointment._id)}
                           variant="outline"
                           size="sm"
                           className="ml-4 text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -599,6 +651,7 @@ const AdvocateSearch = () => {
           <Scale className="w-16 h-16 mx-auto mb-4 text-primary" />
           <h1 className="text-3xl font-bold">Find Your Advocate</h1>
           <p className="text-muted-foreground mt-2">Search and connect with qualified legal professionals</p>
+       
         </div>
 
         <div className="flex justify-end mb-6">
@@ -756,6 +809,7 @@ const AdvocateSearch = () => {
                           <Button 
                             onClick={() => handleConnect(advocate)}
                             className="flex-1"
+                            disabled={!user}
                           >
                             Connect
                           </Button>
@@ -763,6 +817,11 @@ const AdvocateSearch = () => {
                             Basic Specification
                           </Button>
                         </div>
+                        {!user && (
+                          <p className="text-sm text-red-500 text-center">
+                            Please login to connect with advocates
+                          </p>
+                        )}
                       </div>
                     </DialogContent>
                   </Dialog>
@@ -770,10 +829,16 @@ const AdvocateSearch = () => {
                   <Button 
                     onClick={() => handleConnect(advocate)}
                     className="flex-1"
+                    disabled={!user}
                   >
                     Connect
                   </Button>
                 </div>
+                {!user && (
+                  <p className="text-xs text-red-500 text-center mt-2">
+                    Login required to book appointments
+                  </p>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -793,6 +858,7 @@ const AdvocateSearch = () => {
             isOpen={!!selectedAdvocateForBooking}
             onClose={() => setSelectedAdvocateForBooking(null)}
             onBookingConfirmed={handleBookingConfirmed}
+            user={user}
           />
         )}
       </div>

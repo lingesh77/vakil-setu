@@ -177,7 +177,7 @@ app.post('/verify-otp', async (req, res) => {
 });
 app.post('/userdetails', async (req, res) => {
   const { user } = req.body;
-  const{ state, fullName, district, dob, email, phone, address }= user;
+  const{ state, fullName, district, dob, email, phone, address,user_id,userType }= user;
   console.log('Received user data:', user)
   try{
     const db = newclient.db('Vakil-setu');
@@ -190,6 +190,9 @@ app.post('/userdetails', async (req, res) => {
       state: state,
       district: district,
       dob: dob,
+      user_id:user_id,
+      userType:userType
+      
 
     });
     await collection.insertOne(user);
@@ -221,6 +224,63 @@ app.post('/getadvocates', async (req, res)=>{
 
 
 })
+app.post('/bookappointment', async (req, res)=>{
+  const { appointmentData } = req.body;
+  console.log('Received appointment data:', appointmentData)
+  const{advocateId,userId, date, time,status,consultationType,notes,createdAt}= appointmentData;
+  try{
+    const db = newclient.db('Vakil-setu');
+    const collection = db.collection('advocates_booking');
+    const appointment = await collection.insertOne({
+      advocate_id:new mongoose.Types.ObjectId(advocateId),
+      user_id: userId,
+      date: date,
+      time: time,
+      status: status,
+      consultation_type: consultationType,
+      notes: notes,
+      createdAt: createdAt
+    })
+    res.status(200).json({ message: 'Appointment booked successfully' });
+
+  }
+  catch (error) {
+    console.error('Error booking appointment:', error);
+
+  }
+
+
+
+}
+)
+app.post('/getappointments', async (req, res)=>{
+  const { userId }= req.body;
+  try{
+    const db = newclient.db('Vakil-setu');
+    const collection = db.collection('advocates_booking');
+    const appointments = await collection.find({ user_id: userId }).toArray();
+    res.status(200).json({ appointments });
+  }
+  catch (error) {
+    console.error('Error fetching appointments:', error);
+  }
+
+})
+app.post('/cancelappointment', async (req, res)=>{
+  const { appointmentId,status }= req.body;
+  try{
+    const db = newclient.db('Vakil-setu');
+    const collection = db.collection('advocates_booking');
+    await collection.updateOne({
+      _id: new mongoose.Types.ObjectId(appointmentId)
+    }, { $set: { status: status } });
+    res.status(200).json({ message: 'Appointment cancelled successfully' });
+  }
+  catch (error) {
+    console.error('Error cancelling appointments:', error);
+  }
+})
+   
 
 app.listen(process.env.PORT, () => {
   console.log(`✅ Server running on http://localhost:${process.env.PORT}`);
