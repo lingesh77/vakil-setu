@@ -6,6 +6,8 @@ const mongoose = require("mongoose");
 const { connectDB, newclient } = require("./mongoddconnection");
 const User = require('./Schema/Userschema'); // Assuming the schema
 const nodemailer = require('nodemailer');
+const Advocate  = require('./Schema/advocateschema');
+
 
 
 
@@ -198,6 +200,26 @@ app.post('/userdetails', async (req, res) => {
     console.error('Error saving user details:', error);
 
   }
+})
+
+app.post('/getadvocates', async (req, res)=>{
+
+   try{
+    const db = newclient.db('Vakil-setu');
+    const collection = db.collection('advocates');
+    const advocates = await collection.find({}).toArray();
+    console.log("advocates:",advocates)
+    res.status(200).json({ advocates });
+
+
+
+  }
+  catch(error){
+    console.error('Error fetching advocates:', error);
+  } 
+
+
+
 })
 
 app.listen(process.env.PORT, () => {

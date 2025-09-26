@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,108 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import {
   Scale, Search, MapPin, Calendar, Award, Phone, Mail,
   User, Star, Briefcase, Clock, X, CheckCircle,
-  AlertCircle, CalendarIcon, Video
+  AlertCircle, CalendarIcon, Video, Loader2
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
-
-// ---- Sample Data ----
-
-const mockAdvocates = [
-  {
-    id: 1,
-    name: "Dr. Rajesh Kumar",
-    experience: 15,
-    specialization: ["Criminal Law", "Corporate Law"],
-    location: "New Delhi",
-    qualification: "LLB, LLM (Harvard)",
-    description: "Senior advocate with extensive experience in criminal and corporate law. Known for handling high-profile cases with exceptional success rate.",
-    casesWon: 245,
-    rating: 4.8,
-    phone: "+91 98765 43210",
-    email: "rajesh.kumar@lawfirm.com",
-    practiceAreas: ["Criminal Defense", "Corporate Litigation", "Constitutional Law"],
-    barCouncil: "Bar Council of Delhi"
-  },
-  {
-    id: 2,
-    name: "Advocate Priya Sharma",
-    experience: 12,
-    specialization: ["Family Law", "Property Law"],
-    location: "Mumbai",
-    qualification: "LLB, LLM (Oxford)",
-    description: "Specialist in family and property matters with a compassionate approach to client representation.",
-    casesWon: 189,
-    rating: 4.7,
-    phone: "+91 98765 43211",
-    email: "priya.sharma@chambers.com",
-    practiceAreas: ["Divorce & Custody", "Property Disputes", "Inheritance Law"],
-    barCouncil: "Bar Council of Maharashtra"
-  },
-  {
-    id: 3,
-    name: "Sr. Advocate Vikram Singh",
-    experience: 22,
-    specialization: ["Civil Law", "Commercial Law"],
-    location: "Bangalore",
-    qualification: "LLB, LLM, Doctorate in Law",
-    description: "Distinguished senior advocate with over two decades of experience in civil and commercial litigation.",
-    casesWon: 356,
-    rating: 4.9,
-    phone: "+91 98765 43212",
-    email: "vikram.singh@legal.com",
-    practiceAreas: ["Civil Litigation", "Commercial Disputes", "Contract Law"],
-    barCouncil: "Bar Council of Karnataka"
-  },
-  {
-    id: 4,
-    name: "Advocate Meera Patel",
-    experience: 8,
-    specialization: ["Labour Law", "Consumer Law"],
-    location: "Ahmedabad",
-    qualification: "LLB, LLM (Cambridge)",
-    description: "Young and dynamic advocate specializing in labour disputes and consumer protection cases.",
-    casesWon: 134,
-    rating: 4.6,
-    phone: "+91 98765 43213",
-    email: "meera.patel@advocates.com",
-    practiceAreas: ["Employment Disputes", "Consumer Protection", "Service Matters"],
-    barCouncil: "Bar Council of Gujarat"
-  },
-  {
-    id: 5,
-    name: "Advocate Arjun Reddy",
-    experience: 18,
-    specialization: ["Tax Law", "Banking Law"],
-    location: "Hyderabad",
-    qualification: "LLB, LLM, CA",
-    description: "Expert in taxation and banking laws with dual qualification as Chartered Accountant and Lawyer.",
-    casesWon: 278,
-    rating: 4.8,
-    phone: "+91 98765 43214",
-    email: "arjun.reddy@taxlaw.com",
-    practiceAreas: ["Income Tax", "GST", "Banking Regulations"],
-    barCouncil: "Bar Council of Telangana"
-  },
-  {
-    id: 6,
-    name: "Advocate Kavya Nair",
-    experience: 10,
-    specialization: ["Intellectual Property", "Cyber Law"],
-    location: "Chennai",
-    qualification: "LLB, LLM (IP Law)",
-    description: "Technology law specialist with expertise in intellectual property and cyber crime cases.",
-    casesWon: 167,
-    rating: 4.7,
-    phone: "+91 98765 43215",
-    email: "kavya.nair@iplaw.com",
-    practiceAreas: ["Patent Law", "Trademark", "Cyber Crime"],
-    barCouncil: "Bar Council of Tamil Nadu"
-  }
-];
+import axios from 'axios';
 
 // ---- AppointmentBooking Component ----
-
 const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) => {
   const [selectedDate, setSelectedDate] = useState();
   const [selectedTime, setSelectedTime] = useState('');
@@ -116,7 +19,6 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
   const [purpose, setPurpose] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBooked, setIsBooked] = useState(false);
-  const { toast } = useToast();
 
   const timeSlots = [
     '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
@@ -129,23 +31,27 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
     { value: 'video-call', label: 'Video Call', icon: Video },
     { value: 'phone-call', label: 'Phone Call', icon: Phone }
   ];
+
+  // Generate dummy user ID (in real app, this would come from authentication)
+  const getDummyUserId = () => {
+    return 'user_' + Math.random().toString(36).substr(2, 9);
+  };
   
   const handleSubmit = async () => {
     if (!selectedDate || !selectedTime || !meetingType) {
-      toast({
-        title: "Missing Information",
-        description: "Please select date, time, and meeting type",
-        variant: "destructive"
-      });
+      alert("Please select date, time, and meeting type");
       return;
     }
     
     setIsSubmitting(true);
+    
+    // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     const newAppointment = {
       id: Date.now().toString(),
-      advocateId: advocate.id,
+      advocateId: advocate._id || advocate.id, // Use advocate._id as specified
+      userId: getDummyUserId(), // Generate dummy user ID as string
       advocateName: advocate.name,
       date: selectedDate.toISOString().split('T')[0],
       time: selectedTime,
@@ -155,14 +61,12 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
       createdAt: new Date().toISOString()
     };
     
+    // Log the appointment data to show the structure
+    console.log('New Appointment Data:', newAppointment);
+    
     onBookingConfirmed(newAppointment);
     setIsSubmitting(false);
     setIsBooked(true);
-    
-    toast({
-      title: "Appointment Booked!",
-      description: `Your appointment with ${advocate.name} has been confirmed.`
-    });
   };
   
   const handleClose = () => {
@@ -190,16 +94,16 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
   if (isBooked) {
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="legal-card max-w-md">
+        <DialogContent className="max-w-md">
           <div className="text-center py-6 space-y-4">
-            <CheckCircle className="w-16 h-16 mx-auto text-green-500 animate-pulse" />
+            <CheckCircle className="w-16 h-16 mx-auto text-green-500" />
             <div>
-              <h3 className="text-2xl font-bold text-foreground mb-2">Appointment Confirmed!</h3>
+              <h3 className="text-2xl font-bold mb-2">Appointment Confirmed!</h3>
               <p className="text-muted-foreground">
                 Your meeting with <span className="font-semibold text-primary">{advocate.name}</span> has been scheduled.
               </p>
             </div>
-            <Card className="legal-surface p-4 space-y-2">
+            <Card className="p-4 space-y-2">
               <div className="flex items-center gap-2 text-sm">
                 <CalendarIcon className="w-4 h-4 text-primary" />
                 <span>{selectedDate && formatDate(selectedDate)}</span>
@@ -223,7 +127,7 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
               <p className="text-sm text-muted-foreground">
                 You will receive a confirmation email shortly with meeting details.
               </p>
-              <Button onClick={handleClose} className="legal-button w-full">
+              <Button onClick={handleClose} className="w-full">
                 Done
               </Button>
             </div>
@@ -237,7 +141,7 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="legal-card max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="w-5 h-5" />
@@ -250,16 +154,22 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
         
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Advocate Info */}
-          <Card className="legal-surface">
+          <Card>
             <CardHeader>
               <CardTitle className="text-lg">{advocate.name}</CardTitle>
               <CardDescription>Legal Consultation</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
+                <label className="text-sm font-medium">Advocate ID</label>
+                <p className="text-sm text-muted-foreground mt-1 font-mono">
+                  {advocate._id || advocate.id}
+                </p>
+              </div>
+              <div>
                 <label className="text-sm font-medium">Specializations</label>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {advocate.specialization.map((spec, index) => (
+                  {(advocate.specialization || []).map((spec, index) => (
                     <Badge key={index} variant="outline" className="text-xs">
                       {spec}
                     </Badge>
@@ -282,7 +192,7 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
             {/* Date Selection */}
             <div>
               <label className="text-sm font-medium mb-3 block">Select Date</label>
-              <Card className="legal-surface p-3">
+              <Card className="p-3">
                 <div className="grid grid-cols-7 gap-2 text-center text-sm">
                   <div className="font-medium text-muted-foreground">Sun</div>
                   <div className="font-medium text-muted-foreground">Mon</div>
@@ -292,7 +202,6 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
                   <div className="font-medium text-muted-foreground">Fri</div>
                   <div className="font-medium text-muted-foreground">Sat</div>
                   
-                  {/* Simple date picker */}
                   {Array.from({ length: 35 }, (_, i) => {
                     const today = new Date();
                     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -329,7 +238,7 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
 
             {/* Time Selection */}
             {selectedDate && (
-              <div className="animate-slide-up">
+              <div>
                 <label className="text-sm font-medium mb-3 block">Select Time</label>
                 <div className="grid grid-cols-3 gap-2">
                   {timeSlots.map((time) => (
@@ -338,7 +247,6 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
                       variant={selectedTime === time ? "default" : "outline"}
                       size="sm"
                       onClick={() => setSelectedTime(time)}
-                      className={selectedTime === time ? "legal-button" : ""}
                     >
                       {time}
                     </Button>
@@ -349,7 +257,7 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
 
             {/* Meeting Type */}
             {selectedTime && (
-              <div className="animate-slide-up">
+              <div>
                 <label className="text-sm font-medium mb-3 block">Meeting Type</label>
                 <div className="space-y-2">
                   {meetingTypes.map((type) => (
@@ -376,7 +284,7 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
 
             {/* Purpose */}
             {meetingType && (
-              <div className="animate-slide-up">
+              <div>
                 <label htmlFor="purpose" className="text-sm font-medium mb-2 block">
                   Purpose of Meeting (Optional)
                 </label>
@@ -385,22 +293,22 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
                   placeholder="Brief description of your legal matter..."
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
-                  className="legal-input min-h-24 w-full p-3 border rounded-md resize-none"
+                  className="w-full p-3 border rounded-md resize-none min-h-24"
                 />
               </div>
             )}
 
             {/* Submit Button */}
             {meetingType && (
-              <div className="animate-slide-up">
+              <div>
                 <Button
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="legal-button w-full"
+                  className="w-full"
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Booking Appointment...
                     </>
                   ) : (
@@ -420,39 +328,96 @@ const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed }) =
 };
 
 // ---- AdvocateSearch Component ----
-
 const AdvocateSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredAdvocates, setFilteredAdvocates] = useState(mockAdvocates);
+  const [advocateData, setAdvocateData] = useState([]);
+  const [filteredAdvocates, setFilteredAdvocates] = useState([]);
   const [selectedAdvocateForBooking, setSelectedAdvocateForBooking] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [showMyAppointments, setShowMyAppointments] = useState(false);
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch advocates from API
+  useEffect(() => {
+    const fetchAdvocates = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.post('http://localhost:5000/getadvocates');
+        console.log('API Response:', response.data);
+        
+        // Handle different response structures
+        let advocates = [];
+        if (Array.isArray(response.data)) {
+          advocates = response.data;
+        } else if (response.data.advocates && Array.isArray(response.data.advocates)) {
+          advocates = response.data.advocates;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          advocates = response.data.data;
+        }
+        
+        // Normalize advocate data structure
+        const normalizedAdvocates = advocates.map(advocate => ({
+          id: advocate._id || advocate.id || Math.random().toString(),
+          _id: advocate._id || advocate.id || Math.random().toString(), // Ensure _id is preserved
+          name: advocate.name || 'Unknown Advocate',
+          experience: advocate.experience || 0,
+          specialization: Array.isArray(advocate.specialization) ? advocate.specialization : 
+                         typeof advocate.specialization === 'string' ? [advocate.specialization] : 
+                         ['General Practice'],
+          location: advocate.location || 'Unknown Location',
+          qualification: advocate.qualification || 'LLB',
+          description: advocate.description || advocate.bio || 'Experienced legal professional',
+          casesWon: advocate.casesWon || advocate.cases_won || 0,
+          rating: advocate.rating || 4.0,
+          phone: advocate.phone || advocate.contact?.phone || '+91 XXXXXXXXXX',
+          email: advocate.email || advocate.contact?.email || 'contact@example.com',
+          practiceAreas: advocate.practiceAreas || advocate.practice_areas || advocate.specialization || ['General Practice'],
+          barCouncil: advocate.barCouncil || advocate.bar_council || 'Bar Council of India'
+        }));
+        
+        setAdvocateData(normalizedAdvocates);
+        setFilteredAdvocates(normalizedAdvocates);
+        setError(null);
+      } catch (error) {
+        console.error('Error fetching advocates:', error);
+        setError('Failed to fetch advocates. Please try again later.');
+        // Fallback to empty array
+        setAdvocateData([]);
+        setFilteredAdvocates([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAdvocates();
+  }, []);
 
   const handleSearch = () => {
     if (!searchQuery.trim()) {
-      setFilteredAdvocates(mockAdvocates);
+      setFilteredAdvocates(advocateData);
       return;
     }
     
-    const filtered = mockAdvocates.filter(advocate =>
+    const filtered = advocateData.filter(advocate =>
       advocate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       advocate.specialization.some(spec => spec.toLowerCase().includes(searchQuery.toLowerCase())) ||
       advocate.location.toLowerCase().includes(searchQuery.toLowerCase())
     );
     
     setFilteredAdvocates(filtered);
-    toast({ 
-      title: "Search Results", 
-      description: `Found ${filtered.length} advocate(s) matching your criteria` 
-    });
   };
 
   const handleConnect = (advocate) => setSelectedAdvocateForBooking(advocate);
 
-  const handleBookingConfirmed = (newAppointment) => 
+  const handleBookingConfirmed = (newAppointment) => {
+    console.log('Appointment stored with structure:', {
+      advocateId: newAppointment.advocateId,
+      userId: newAppointment.userId,
+      fullAppointment: newAppointment
+    });
     setAppointments(prev => [...prev, newAppointment]);
+  };
 
   const handleCancelAppointment = (appointmentId) => {
     setAppointments(prev =>
@@ -462,10 +427,7 @@ const AdvocateSearch = () => {
           : appointment
       )
     );
-    toast({ 
-      title: "Appointment Cancelled", 
-      description: "Your appointment has been cancelled successfully" 
-    });
+    alert('Appointment cancelled successfully');
   };
 
   const getStatusIcon = (status) => {
@@ -494,6 +456,37 @@ const AdvocateSearch = () => {
       />
     ));
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <Loader2 className="w-16 h-16 mx-auto mb-4 text-primary animate-spin" />
+            <h3 className="text-xl font-semibold mb-2">Loading Advocates...</h3>
+            <p className="text-muted-foreground">Please wait while we fetch the latest data</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+            <h3 className="text-xl font-semibold mb-2 text-red-600">Error Loading Data</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // --- Appointments Page ---
   if (showMyAppointments) {
     return (
@@ -501,7 +494,7 @@ const AdvocateSearch = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8">
             <Calendar className="w-16 h-16 mx-auto mb-4 text-primary" />
-            <h1 className="text-3xl font-bold text-foreground">My Appointments</h1>
+            <h1 className="text-3xl font-bold">My Appointments</h1>
             <p className="text-muted-foreground mt-2">View and manage your scheduled appointments</p>
           </div>
 
@@ -514,7 +507,7 @@ const AdvocateSearch = () => {
           {appointments.length > 0 ? (
             <div className="space-y-4">
               {appointments.map((appointment) => (
-                <Card key={appointment.id} className="legal-card">
+                <Card key={appointment.id}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -538,11 +531,19 @@ const AdvocateSearch = () => {
                               <Clock className="w-4 h-4 text-muted-foreground" />
                               <span>Time: {appointment.time}</span>
                             </div>
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-muted-foreground" />
+                              <span className="font-mono text-xs">User: {appointment.userId}</span>
+                            </div>
                           </div>
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
                               <Briefcase className="w-4 h-4 text-muted-foreground" />
                               <span>Type: {appointment.consultationType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Scale className="w-4 h-4 text-muted-foreground" />
+                              <span className="font-mono text-xs">Advocate: {appointment.advocateId}</span>
                             </div>
                             <div className="text-xs text-muted-foreground">
                               Booked: {new Date(appointment.createdAt).toLocaleDateString()}
@@ -580,46 +581,36 @@ const AdvocateSearch = () => {
               <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-xl font-semibold mb-2">No appointments yet</h3>
               <p className="text-muted-foreground mb-4">You haven't booked any appointments with advocates</p>
-              <Button onClick={() => setShowMyAppointments(false)} className="legal-button">
+              <Button onClick={() => setShowMyAppointments(false)}>
                 Find Advocates
               </Button>
             </div>
           )}
         </div>
-
-        {/* Floating Sticky Button */}
-        <Button
-          className="fixed bottom-4 right-4 w-12 h-12 rounded-lg z-50 flex items-center justify-center legal-button"
-          onClick={() => alert('Quick Action!')}
-          aria-label="Quick Action"
-        >
-          <Scale className="w-6 h-6" />
-        </Button>
       </div>
     );
   }
 
-  // --- AdvocateSearch Page ---
+  // --- Main Search Page ---
   return (
     <div className="min-h-screen legal-gradient p-4">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8">
           <Scale className="w-16 h-16 mx-auto mb-4 text-primary" />
-          <h1 className="text-3xl font-bold text-foreground">Find Your Advocate</h1>
+          <h1 className="text-3xl font-bold">Find Your Advocate</h1>
           <p className="text-muted-foreground mt-2">Search and connect with qualified legal professionals</p>
         </div>
 
         <div className="flex justify-end mb-6">
           <Button 
             onClick={() => setShowMyAppointments(true)}
-            className="legal-button"
           >
             <Calendar className="w-4 h-4 mr-2" />
             My Appointments ({appointments.length})
           </Button>
         </div>
 
-        <Card className="legal-card mb-8">
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="w-5 h-5" />
@@ -635,10 +626,10 @@ const AdvocateSearch = () => {
                 placeholder="Search advocates by name, specialization, or location..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="legal-input flex-1"
+                className="flex-1"
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               />
-              <Button onClick={handleSearch} className="legal-button">
+              <Button onClick={handleSearch}>
                 <Search className="w-4 h-4 mr-2" />
                 Search
               </Button>
@@ -648,7 +639,7 @@ const AdvocateSearch = () => {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAdvocates.map((advocate) => (
-            <Card key={advocate.id} className="legal-card hover:scale-105 transition-transform duration-300">
+            <Card key={advocate.id} className="hover:scale-105 transition-transform duration-300">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
@@ -685,7 +676,7 @@ const AdvocateSearch = () => {
                         View Details
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="legal-card max-w-2xl">
+                    <DialogContent className="max-w-2xl">
                       <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                           <User className="w-5 h-5" />
@@ -764,7 +755,7 @@ const AdvocateSearch = () => {
                         <div className="flex gap-3">
                           <Button 
                             onClick={() => handleConnect(advocate)}
-                            className="legal-button flex-1"
+                            className="flex-1"
                           >
                             Connect
                           </Button>
@@ -778,7 +769,7 @@ const AdvocateSearch = () => {
 
                   <Button 
                     onClick={() => handleConnect(advocate)}
-                    className="legal-button flex-1"
+                    className="flex-1"
                   >
                     Connect
                   </Button>
@@ -788,7 +779,7 @@ const AdvocateSearch = () => {
           ))}
         </div>
 
-        {filteredAdvocates.length === 0 && (
+        {filteredAdvocates.length === 0 && !loading && (
           <div className="text-center py-12">
             <Search className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-xl font-semibold mb-2">No advocates found</h3>
@@ -806,13 +797,13 @@ const AdvocateSearch = () => {
         )}
       </div>
 
-      {/* Sticky Floating Button (appears on Search page) */}
+      {/* Sticky Floating Button */}
       <Button
-        className="fixed bottom-4 right-4 w-12 h-12 rounded-lg z-50 flex items-center justify-center legal-button"
-      onClick={() => navigate('/vakil-setu')}
-        aria-label="Quick Action"
+        className="fixed bottom-4 right-4 w-12 h-12 rounded-full z-50 flex items-center justify-center shadow-lg"
+        onClick={() => alert('AI Assistant Coming Soon!')}
+        aria-label="AI Assistant"
       > 
-        AI
+        <Scale className="w-6 h-6" />
       </Button>
     </div>
   );

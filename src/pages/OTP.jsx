@@ -86,6 +86,9 @@ const OTP = () => {
     // Proceed to create Firebase user anyway
     try {
       await createUserWithEmailAndPassword(auth, signUpData.email, signUpData.password);
+      
+
+
 
      
 
