@@ -10,6 +10,7 @@ import {
   AlertCircle, CalendarIcon, Video, Loader2
 } from 'lucide-react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 // ---- AppointmentBooking Component ----
 const AppointmentBooking = ({ advocate, isOpen, onClose, onBookingConfirmed, user }) => {
@@ -361,6 +362,7 @@ const AdvocateSearch = ({user}) => {
   const [showMyAppointments, setShowMyAppointments] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const Navigate=useNavigate();
 
   // Fetch advocates from API
   useEffect(() => {
@@ -866,7 +868,9 @@ const AdvocateSearch = ({user}) => {
       {/* Sticky Floating Button */}
       <Button
         className="fixed bottom-4 right-4 w-12 h-12 rounded-full z-50 flex items-center justify-center shadow-lg"
-        onClick={() => alert('AI Assistant Coming Soon!')}
+        onClick={() =>{
+          Navigate('/vakil-setu')
+        }}
         aria-label="AI Assistant"
       > 
         <Scale className="w-6 h-6" />
